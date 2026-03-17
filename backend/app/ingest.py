@@ -1,4 +1,5 @@
 import os, re, hashlib
+import uuid
 from typing import List, Dict, Tuple
 from .settings import settings
 
@@ -46,4 +47,4 @@ def load_documents(data_dir: str) -> List[Dict]:
     return docs
 
 def doc_hash(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return str(uuid.uuid4())
