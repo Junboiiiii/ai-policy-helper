@@ -12,6 +12,7 @@ class AskRequest(BaseModel):
 class Citation(BaseModel):
     title: str
     section: str | None = None
+    text: str
 
 class Chunk(BaseModel):
     title: str
