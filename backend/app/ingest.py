@@ -47,4 +47,5 @@ def load_documents(data_dir: str) -> List[Dict]:
     return docs
 
 def doc_hash(text: str) -> str:
-    return str(uuid.uuid4())
+    h = hashlib.sha1(text.encode("utf-8")).hexdigest()
+    return str(uuid.UUID(h[:32]))

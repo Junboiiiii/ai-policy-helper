@@ -9,8 +9,8 @@ class Settings(BaseModel):
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://ollama:11434")
     vector_store: str = os.getenv("VECTOR_STORE", "qdrant")  # qdrant | memory
     collection_name: str = os.getenv("COLLECTION_NAME", "policy_helper")
-    chunk_size: int = int(os.getenv("CHUNK_SIZE", "700"))
-    chunk_overlap: int = int(os.getenv("CHUNK_OVERLAP", "80"))
+    chunk_size: int = int(os.getenv("CHUNK_SIZE", "100"))
+    chunk_overlap: int = int(os.getenv("CHUNK_OVERLAP", "20"))
     data_dir: str = os.getenv("DATA_DIR", "/app/data")
 
 settings = Settings()

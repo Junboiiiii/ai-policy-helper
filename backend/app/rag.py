@@ -4,6 +4,7 @@ import numpy as np
 from .settings import settings
 from .ingest import chunk_text, doc_hash
 from qdrant_client import QdrantClient, models as qm
+from sentence_transformers import SentenceTransformer
 
 # ---- Simple local embedder (deterministic) ----
 def _tokenize(s: str) -> List[str]:
@@ -12,8 +13,19 @@ def _tokenize(s: str) -> List[str]:
 class LocalEmbedder:
     def __init__(self, dim: int = 384):
         self.dim = dim
+        try:
+            self.model = SentenceTransformer("all-MiniLM-L6-v2")
+            self.use_transformer = True
+            print("[INFO] Using sentence-transformers for embeddings")
+        except Exception as e:
+            print(f"[WARN] Falling back to hash embedder: {e}")
+            self.model = None
+            self.use_transformer = False
 
     def embed(self, text: str) -> np.ndarray:
+        if self.use_transformer:
+            v = self.model.encode(text, normalize_embeddings=True)
+            return v.astype("float32")
         # Hash-based repeatable pseudo-embedding
         h = hashlib.sha1(text.encode("utf-8")).digest()
         rng_seed = int.from_bytes(h[:8], "big") % (2**32-1)
@@ -175,8 +187,15 @@ class RAGEngine:
         metas = []
         doc_titles_before = set(self._doc_titles)
 
+        seen_texts = set()
+
         for ch in chunks:
             text = ch["text"]
+            # Skip if we've already seen this exact text
+            if text in seen_texts:  
+                continue            
+            seen_texts.add(text) 
+               
             h = doc_hash(text)
             meta = {
                 "id": h,
@@ -197,9 +216,19 @@ class RAGEngine:
     def retrieve(self, query: str, k: int = 4) -> List[Dict]:
         t0 = time.time()
         qv = self.embedder.embed(query)
-        results = self.store.search(qv, k=k)
+        results = self.store.search(qv, k=20) # fetch extra to allow dedup
         self.metrics.add_retrieval((time.time()-t0)*1000.0)
-        return [meta for score, meta in results]
+        # Deduplicate by (title + section) combination
+        seen = set()
+        unique = []
+        for score, meta in results:
+            key = f"{meta.get('title', '')}|{meta.get('section', '')}|{meta.get('text', '')[:50]}"
+            if key not in seen:
+                seen.add(key)
+                unique.append(meta)
+            if len(unique) >= k:
+                break
+        return unique
 
     def generate(self, query: str, contexts: List[Dict]) -> str:
         t0 = time.time()

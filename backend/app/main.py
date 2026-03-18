@@ -37,7 +37,7 @@ def ingest():
 
 @app.post("/api/ask", response_model=AskResponse)
 def ask(req: AskRequest):
-    ctx = engine.retrieve(req.query, k=req.k or 4)
+    ctx = engine.retrieve(req.query, k=req.k or 6)# increase default
     answer = engine.generate(req.query, ctx)
     citations = [Citation(title=c.get("title"), section=c.get("section")) for c in ctx]
     chunks = [Chunk(title=c.get("title"), section=c.get("section"), text=c.get("text")) for c in ctx]
